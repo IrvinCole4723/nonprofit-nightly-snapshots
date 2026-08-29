@@ -1,0 +1,13 @@
+{
+  "nonprofit_id": "library-friends",
+  "snapshot_date": "2026-08-17",
+  "receipts": [
+    {"receipt_id": "rcpt-104", "donor_id": "donor-8", "amount_cents": 7500, "received_on": "2026-08-17"}
+  ],
+  "reminders": [
+    {"volunteer_id": "v-1", "shift_id": "s-9", "due_on": "2026-08-18", "sent": false}
+  ],
+  "campaigns": [
+    {"campaign_id": "books", "donated_cents": 7500, "volunteer_hours": 3}
+  ]
+}
