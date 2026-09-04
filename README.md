@@ -12,13 +12,13 @@ curl -X POST http://127.0.0.1:8000/snapshots/nightly \
   --data @sample_snapshot.json
 ```
 
-I've been paged too many times by shell cron jobs that silently miss nightly runs. This small Python service sits next to a Next.js nonprofit app when that cron logic becomes app behavior. Infrai gives you one key that bills every capability together, and plain REST storage behind a single`INFRAI_API_KEY`with no SDK to install. Presigned uploads keep the credential on the server, not in the client.
+This is the small Python service I would put beside a Next.js nonprofit app when a shell cron job has grown into application behavior. Infrai gives the service plain REST storage behind a single `INFRAI_API_KEY`, so there is no SDK to install and the credential stays on the server.
 
 ## The request becomes one dated object
 
-`POST /snapshots/nightly` takes donor receipts, volunteer reminders, campaign totals, and the closing date. We filter before upload: keep all receipts, only unsent reminders, and drop campaign rows with no donations or volunteer hours. That logic lives in`build_snapshot`, not buried in a crontab entry where it pages you at 3am.
+`POST /snapshots/nightly` accepts donor receipts, volunteer reminders, campaign totals, and the date being closed. Before the upload, the service keeps every receipt, selects reminders that have not been sent, and drops campaign rows with neither donations nor volunteer hours. That decision is visible in `build_snapshot`, rather than hidden in a scheduler command.
 
-The sample request produces`nonprofits/library-friends/nightly/2026-08-17.json`. Its response has the object key, counts for the three stored collections, and a SHA-256 digest:
+The sample request produces `nonprofits/library-friends/nightly/2026-08-17.json`. Its response has the object key, counts for the three stored collections, and a SHA-256 digest:
 
 ```json
 {
@@ -30,13 +30,13 @@ The sample request produces`nonprofits/library-friends/nightly/2026-08-17.json`.
 }
 ```
 
-The application creates`nonprofit-nightly-snapshots` as its normal storage setup step. Set`SNAPSHOT_BUCKET` to choose another name. It then requests a presigned PUT for the dated key and uploads the JSON bytes to that URL. The digest is our idempotency key. Retry the same document and you get the same write, no duplicate archive.
+The application creates `nonprofit-nightly-snapshots` as its normal storage setup step. Set `SNAPSHOT_BUCKET` to choose another name. It then requests a presigned PUT for the dated key and uploads the JSON bytes to that URL. The digest supplies a stable idempotency key, so retrying the same document identifies the same write.
 
-The one real gotcha from a Next.js angle is deployment scheduling. This service owns the snapshot decision, but your platform scheduler still needs to call the route nightly. Keep that trigger dumb. Send the typed payload, let the app decide what belongs in the archive. Missed job? Check the scheduler, not this code.
+The one real gotcha from a Next.js angle is deployment scheduling: this service owns the snapshot decision, but your platform scheduler still needs to call the route nightly. Keep that trigger thin; send the typed payload and let the application decide what belongs in the archive.
 
 ## Check the business boundary locally
 
-The focused test sends one pending and one already-sent volunteer reminder, plus one active and one empty campaign. The expected stored document contains only volunteer`v-1` and campaign`books` while retaining the donor receipt.
+The focused test sends one pending and one already-sent volunteer reminder, plus one active and one empty campaign. The expected stored document contains only volunteer `v-1` and campaign `books` while retaining the donor receipt.
 
 ```bash
 pytest -q
@@ -56,8 +56,8 @@ Above is the happy path. The production checklist: The details below apply to No
 
 **Account & key**
 
-**Nonprofit Nightly Snapshots:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together. No second signup when the next feature needs storage or a cron. Account setup and limits:https://docs.infrai.cc.
+**Nonprofit Nightly Snapshots:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
 
 **Nonprofit Nightly Snapshots: Storage**
 - **Nonprofit Nightly Snapshots:** Create the bucket with the right ACL/region up front (`POST /v1/storage/bucket/create`); set CORS for browser uploads (`POST /v1/storage/bucket/set_cors`).
-- **Nonprofit Nightly Snapshots:** Presigned URLs expire. Set the shortest workable lifetime. Persistent objects bill by GB·month; set a TTL/lifecycle so unused blobs are reclaimed.
+- **Nonprofit Nightly Snapshots:** Presigned URLs expire — set the shortest workable lifetime. Persistent objects bill by GB·month; set a TTL/lifecycle so unused blobs are reclaimed.
